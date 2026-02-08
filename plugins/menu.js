@@ -41,22 +41,7 @@ cmd({
 11. 🔍 *Search Menu*
 12. ⚙️ *Setting Menu*
 
-> ${config.DESCRIPTION}`;
-
-      // Fake VCard
-        const FakeVCard = {
-      key: {
-        fromMe: false,
-        participant: "0@s.whatsapp.net",
-        remoteJid: "status@broadcast"
-      },
-      message: {
-        contactMessage: {
-          displayName: "ᴀᴋɪɴᴅᴜ-ᴍᴅ",
-          vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:Meta\nORG:META AI;\nTEL;type=CELL;type=VOICE;waid=13135550002:+13135550002\nEND:VCARD`
-        }
-      }
-    };       
+> ${config.DESCRIPTION}`;     
         
 
 
