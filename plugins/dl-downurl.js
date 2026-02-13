@@ -1,4 +1,4 @@
-const {cmd , commands} = require('../command');
+const { cmd, commands } = require('../command');
 const axios = require("axios");
 
 cmd({
@@ -10,41 +10,58 @@ cmd({
     category: "search",
     filename: __filename
 },
-async (conn, mek, m, {
-    from,
-    q,
-    reply
-}) => {
+async (conn, mek, m, { from, q, reply, sender }) => {
     try {
-        // Check link
         if (!q) {
-            return reply("Please give me a valid link");
+            return reply("⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴅɪʀᴇᴄᴛ ʟɪɴᴋ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
         }
 
         const link = q.trim();
-
         const urlPattern = /^(https?:\/\/[^\s]+)/i;
+        
         if (!urlPattern.test(link)) {
-            return reply("This ulr is invalid !");
+            return reply("❌ *ɪɴᴠᴀʟɪᴅ ᴜʀʟ ꜰᴏʀᴍᴀᴛ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
         }
 
-        // Optional: Check link availability
-        await axios.head(link).catch(() => {
-            throw "❌ Can't open link";
+        // Fetching file metadata for the Cyber-Grid box
+        const head = await axios.head(link).catch(() => {
+            throw "❌ *ᴜɴᴀʙʟᴇ ᴛᴏ ʀᴇᴀᴄʜ ᴛʜᴇ sᴇʀᴠᴇʀ.*";
         });
 
-        const caption = `*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
+        const contentType = head.headers['content-type'] || "application/octet-stream";
+        const sizeBytes = head.headers['content-length'];
+        const sizeMB = sizeBytes ? (sizeBytes / (1024 * 1024)).toFixed(2) + " MB" : "Unknown Size";
+
+        // --- CYBER GRID INFO ---
+        const infoMsg = `
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴜʀʟ ꜰᴇᴛᴄʜᴇʀ 」*
+
+┌───────────────────┐
+  📂 *ꜰᴏʀᴍᴀᴛ:* ${contentType.split('/')[1]?.toUpperCase() || 'DATA'}
+  📦 *sɪᴢᴇ:* ${sizeMB}
+  🔗 *sᴛᴀᴛᴜs:* ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...
+└───────────────────┘
+> *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
+
+        await reply(infoMsg);
 
         // Send file as document
         await conn.sendMessage(from, {
             document: { url: link },
-            mimetype: "video/mp4",
-            fileName: `ᴀᴋɪɴᴅᴜ-ᴍᴅ`,
-            caption: caption
+            mimetype: contentType,
+            fileName: `ᴀᴋɪɴᴅᴜ-ᴍᴅ_ꜰɪʟᴇ`,
+            caption: `*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`,
+            contextInfo: {
+                mentionedJid: [sender],
+                forwardingScore: 0,
+                isForwarded: false
+            }
         }, { quoted: mek });
+
+        await conn.sendMessage(from, { react: { text: '✅', key: m.key } });
 
     } catch (err) {
         console.error(err);
-        reply("❌ Download failed!\n\n" + err);
+        reply(`${err}\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
     }
 });

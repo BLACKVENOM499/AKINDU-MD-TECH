@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { cmd } = require('../command');
+const config = require('../config');
 
 cmd({
   pattern: "tiktok",
@@ -7,51 +8,63 @@ cmd({
   desc: "Download TikTok videos",
   category: "download",
   filename: __filename
-}, async (conn, m, store, { from, quoted, q, reply }) => {
+}, async (conn, m, store, { from, quoted, q, reply, sender }) => {
   try {
     if (!q || !q.startsWith("https://")) {
-      return reply("❌ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴛɪᴋᴛᴏᴋ ᴜʀʟ*");
+      return reply("⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴛɪᴋᴛᴏᴋ ᴜʀʟ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
     }
 
     await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
 
-    // ✅ API Request
+    // ✅ Fetching data
     const response = await axios.get(`https://api-aswin-sparky.koyeb.app/api/downloader/tiktok?url=${q}`);
     const data = response.data;
 
     if (!data || !data.status || !data.data) {
-      return reply("⚠️ *ꜰᴀɪʟᴇᴅ ᴛᴏ ʀᴇᴛʀɪᴇᴠᴇ ᴍᴇᴅɪᴀ. ᴛʀʏ ᴀɢᴀɪɴ.*");
+      return reply("❌ *ꜰᴀɪʟᴇᴅ ᴛᴏ ʀᴇᴛʀɪᴇᴠᴇ ᴍᴇᴅɪᴀ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
     }
     
     const dat = data.data;
     
-    // ✨ Stylish Caption Layout
+    // --- CYBER GRID SELECTION PANEL ---
     const caption = `
-┏━━━━━━━ 📥 ━━━━━━━┓
-  *ᴛɪᴋᴛᴏᴋ ᴅᴏᴡɴʟᴏᴀᴅᴇʀ*
-┗━━━━━━━━━━━━━━━━━┛
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴛᴛ ᴅᴏᴡɴʟᴏᴀᴅᴇʀ 」*
 
-📑 *ᴛɪᴛʟᴇ:* ${dat.title || "No title"}
-⏱️ *ᴅᴜʀᴀᴛɪᴏɴ:* ${dat.duration || "N/A"}
+┌───────────────────┐
+  📑 *ᴛɪᴛʟᴇ:* ${dat.title || "No title"}
+  ⏱️ *ᴅᴜʀ:* ${dat.duration || "N/A"}
+  📊 *sᴛᴀᴛs:* ❤️ ${dat.view || "0"} | 💬 ${dat.comment || "0"}
+└───────────────────┘
 
-📊 *sᴛᴀᴛs:*
-  ❤️ ${dat.view || "0"} | 💬 ${dat.comment || "0"} | 🔁 ${dat.share || "0"}
+*sᴇʟᴇᴄᴛ ᴘʀᴏᴛᴏᴄᴏʟ:*
 
-🔢 *ʀᴇᴘʟʏ ᴡɪᴛʜ ᴀ ɴᴜᴍʙᴇʀ:*
-
-  1️⃣  *ᴠɪᴅᴇᴏ (ʜᴅ ǫᴜᴀʟɪᴛʏ)*
-  2️⃣  *ᴀᴜᴅɪᴏ (ᴍᴘ3 ꜰɪʟᴇ)*
-
-> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
+┏━━━━━━━━━━━━━━━━━━━┓
+┃ 01 ‣ *ᴠɪᴅᴇᴏ (ʜᴅ ǫᴜᴀʟɪᴛʏ)* 🎥
+┃ 02 ‣ *ᴀᴜᴅɪᴏ (ᴍᴘ3 ꜰɪʟᴇ)* 🎶
+┗━━━━━━━━━━━━━━━━━━━┛
+> *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
 
     const sentMsg = await conn.sendMessage(from, {
       image: { url: dat.thumbnail },
-      caption
+      caption,
+      contextInfo: {
+        mentionedJid: [sender],
+        forwardingScore: 0,
+        isForwarded: false,
+        externalAdReply: {
+          title: "ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴍᴇᴅɪᴀ ᴄᴏʀᴇ",
+          body: "ᴛɪᴋᴛᴏᴋ ᴄᴏɴᴛᴇɴᴛ ᴅᴇʟɪᴠᴇʀʏ",
+          thumbnail: { url: dat.thumbnail },
+          sourceUrl: `https://wa.me/${config.OWNER_NUMBER}`,
+          mediaType: 1,
+          renderLargerThumbnail: true
+        }
+      }
     }, { quoted: m });
 
     const messageID = sentMsg.key.id;
 
-    // 🧠 Interaction Handler
+    // --- INTERACTIVE LISTENER ---
     const handler = async (msgData) => {
       const receivedMsg = msgData.messages[0];
       if (!receivedMsg?.message) return;
@@ -60,35 +73,33 @@ cmd({
       const isReplyToBot = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
 
       if (isReplyToBot) {
-        await conn.sendMessage(from, { react: { text: '📥', key: receivedMsg.key } });
-
         if (receivedText === "1") {
+          await conn.sendMessage(from, { react: { text: '🎥', key: receivedMsg.key } });
           await conn.sendMessage(from, {
             video: { url: dat.video },
-            caption: `✅ *ᴅᴏᴡɴʟᴏᴀᴅᴇᴅ:* ${dat.title || "TikTok Video"}\n\n> *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`
+            caption: "*ᴀᴋɪɴᴅᴜ-ᴍᴅ*",
+            contextInfo: { forwardingScore: 0, isForwarded: false }
           }, { quoted: receivedMsg });
-          conn.ev.off("messages.upsert", handler); // Stop listening after success
+          conn.ev.off("messages.upsert", handler);
         } 
         else if (receivedText === "2") {
+          await conn.sendMessage(from, { react: { text: '🎶', key: receivedMsg.key } });
           await conn.sendMessage(from, {
             audio: { url: dat.audio },
-            mimetype: "audio/mpeg",
-            ptt: false
+            mimetype: "audio/mp4",
+            ptt: false,
+            contextInfo: { forwardingScore: 0, isForwarded: false }
           }, { quoted: receivedMsg });
-          conn.ev.off("messages.upsert", handler); // Stop listening after success
+          conn.ev.off("messages.upsert", handler);
         }
       }
     };
 
     conn.ev.on("messages.upsert", handler);
-
-    // Auto-cleanup listener after 5 minutes
-    setTimeout(() => {
-      conn.ev.off("messages.upsert", handler);
-    }, 300000);
+    setTimeout(() => conn.ev.off("messages.upsert", handler), 300000);
 
   } catch (error) {
-    console.error("TikTok Plugin Error:", error);
-    reply("❌ *ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ.*");
+    console.error(error);
+    reply("❌ *sʏsᴛᴇᴍ ᴇʀʀᴏʀ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
   }
 });

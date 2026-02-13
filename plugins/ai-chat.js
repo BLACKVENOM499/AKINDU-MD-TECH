@@ -1,6 +1,15 @@
 const { cmd } = require('../command');
 const axios = require('axios');
+const config = require('../config');
 
+// --- HELPER FOR CLEAN CONTEXT ---
+const cleanContext = (sender) => ({
+    mentionedJid: [sender],
+    forwardingScore: 0,
+    isForwarded: false
+});
+
+// 1. CHAT OPENAI
 cmd({
     pattern: "ai",
     desc: "Chat with an AI model",
@@ -8,27 +17,35 @@ cmd({
     react: "🤖",
     filename: __filename
 },
-async (conn, mek, m, { from, args, q, reply, react }) => {
+async (conn, mek, m, { from, args, q, reply, react, sender }) => {
     try {
-        if (!q) return reply("Please provide a message for the AI.\nExample: `.ai Hello`");
+        if (!q) return reply(`⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴍᴇssᴀɢᴇ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
 
         const apiUrl = `https://apis.sandarux.sbs/api/ai/chatopenai?apikey=darknero&text=${encodeURIComponent(q)}`;
         const { data } = await axios.get(apiUrl);
 
         if (!data || !data.answer) {
             await react("❌");
-            return reply("AI failed to respond. Please try again later.");
+            return reply(`❌ *ᴀɪ ꜰᴀɪʟᴇᴅ ᴛᴏ ʀᴇsᴘᴏɴᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
         }
 
-        await reply(`🤖 *AI Response:*\n\n${data.answer}`);
+        const response = `
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴀɪ ᴄʜᴀᴛ 」*
+
+┌───────────────────┐
+${data.answer}
+└───────────────────┘
+> *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
+
+        await conn.sendMessage(from, { text: response, contextInfo: cleanContext(sender) }, { quoted: mek });
         await react("✅");
     } catch (e) {
-        console.error("Error in AI command:", e);
         await react("❌");
-        reply("An error occurred while communicating with the AI.");
+        reply(`❌ *ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
     }
 });
 
+// 2. OPENAI (SUPUN API)
 cmd({
     pattern: "openai",
     desc: "Chat with OpenAI",
@@ -36,212 +53,140 @@ cmd({
     react: "🧠",
     filename: __filename
 },
-async (conn, mek, m, { from, args, q, reply, react }) => {
+async (conn, mek, m, { from, args, q, reply, react, sender }) => {
     try {
-        if (!q) return reply("Please provide a message for OpenAI.\nExample: `.openai Hello`");
+        if (!q) return reply(`⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ǫᴜᴇʀʏ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
 
         const apiUrl = `https://supun-md-api-xmjh.vercel.app/api/ai/openai?q=${encodeURIComponent(q)}`;
         const { data } = await axios.get(apiUrl);
 
         if (!data || !data.results) {
             await react("❌");
-            return reply("OpenAI failed to respond. Please try again later.");
+            return reply(`❌ *ᴏᴘᴇɴᴀɪ ꜰᴀɪʟᴇᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
         }
 
-        await reply(`🧠 *OpenAI Response:*\n\n${data.results}`);
+        const response = `
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴏᴘᴇɴᴀɪ 」*
+
+┌───────────────────┐
+${data.results}
+└───────────────────┘
+> *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
+
+        await conn.sendMessage(from, { text: response, contextInfo: cleanContext(sender) }, { quoted: mek });
         await react("✅");
     } catch (e) {
-        console.error("Error in OpenAI command:", e);
         await react("❌");
-        reply("An error occurred while communicating with OpenAI.");
+        reply(`❌ *ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
     }
 });
 
-cmd({
-    pattern: "openai2",
-    desc: "Chat with OpenAI",
-    category: "ai",
-    react: "🧠",
-    filename: __filename
-},
-async (conn, mek, m, { from, args, q, reply, react }) => {
-    try {
-        if (!q) return reply("Please provide a message for OpenAI.\nExample: `.openai Hello`");
-
-        const apiUrl = `https://malvin-api.vercel.app/ai/openai?text=${encodeURIComponent(q)}`;
-        const { data } = await axios.get(apiUrl);
-
-        if (!data || !data.result) {
-            await react("❌");
-            return reply("OpenAI failed to respond. Please try again later.");
-        }
-
-        await reply(`🧠 *OpenAI Response:*\n\n${data.result}`);
-        await react("✅");
-    } catch (e) {
-        console.error("Error in OpenAI command:", e);
-        await react("❌");
-        reply("An error occurred while communicating with OpenAI.");
-    }
-});
-
+// 3. VENICE (MISTRAL 24B)
 cmd({
     pattern: "venice",
-    desc: "Chat with Microsoft Copilot - GPT-5",
+    desc: "Chat with Venice AI",
     category: "ai",
     react: "🤖",
     filename: __filename
 },
-async (conn, mek, m, { from, args, q, reply, react }) => {
+async (conn, mek, m, { from, args, q, reply, react, sender }) => {
     try {
-        if (!q) {
-            return reply("🧠 Please provide a message for the AI.\nExample: `.venice Hello`");
-        }
+        if (!q) return reply(`⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ǫᴜᴇʀʏ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
 
-        // ✅ Malvin API - GPT-5 Endpoint
         const apiUrl = `https://malvin-api.vercel.app/ai/venice?text=${encodeURIComponent(q)}`;
-
         const { data } = await axios.get(apiUrl);
 
-        // 🧾 Validate Response
         if (!data?.status || !data?.result) {
             await react("❌");
-            return reply("AI failed to respond. Please try again later.");
+            return reply(`❌ *ᴠᴇɴɪᴄᴇ ꜰᴀɪʟᴇᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
         }
 
-        // 🧩 Nicely formatted response
-        const responseMsg = `
-Venice AI - Dolphin 3.0 Mistral 24B  
-━━━━━━━━━━━━━━━  
-${data.result}
-        `.trim();
+        const response = `
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴠᴇɴɪᴄᴇ ᴀɪ 」*
 
-        await reply(responseMsg);
+┌───────────────────┐
+${data.result}
+└───────────────────┘
+> *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
+
+        await conn.sendMessage(from, { text: response, contextInfo: cleanContext(sender) }, { quoted: mek });
         await react("✅");
     } catch (e) {
-        console.error("Error in AI command:", e);
         await react("❌");
-        reply("An error occurred while communicating with the AI.");
+        reply(`❌ *ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
     }
 });
 
+// 4. COPILOT (STANDARD)
 cmd({
     pattern: "copilot",
-    desc: "Chat with an AI model",
+    desc: "Chat with Copilot",
     category: "ai",
     react: "🤖",
     filename: __filename
 },
-async (conn, mek, m, { from, args, q, reply, react }) => {
+async (conn, mek, m, { from, args, q, reply, react, sender }) => {
     try {
-        if (!q) return reply("🧠 Please provide a message for the AI.\n\nExample: `.copilot Hello`");
+        if (!q) return reply(`⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ɪɴᴘᴜᴛ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
 
-        // ✅ Updated API URL (Malvin API)
         const apiUrl = `https://malvin-api.vercel.app/ai/copilot?text=${encodeURIComponent(q)}`;
-
         const { data } = await axios.get(apiUrl);
 
         if (!data?.status || !data?.result) {
             await react("❌");
-            return reply("AI failed to respond. Please try again later.");
+            return reply(`❌ *ᴄᴏᴘɪʟᴏᴛ ꜰᴀɪʟᴇᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
         }
 
-        // 🧾 Format the response nicely
-        const responseMsg = `
-🤖 *Microsoft Copilot AI Response*  
-━━━━━━━━━━━━━━━  
-${data.result}  
+        const response = `
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴄᴏᴘɪʟᴏᴛ 」*
 
-🕒 *Response Time:* ${data.response_time}
-        `.trim();
-
-        await reply(responseMsg);
-        await react("✅");
-    } catch (e) {
-        console.error("Error in AI command:", e);
-        await react("❌");
-        reply("An error occurred while communicating with the AI.");
-    }
-});
-
-cmd({
-    pattern: "copilot2",
-    desc: "Chat with Microsoft Copilot (Deep Thinking)",
-    category: "ai",
-    react: "🤖",
-    filename: __filename
-},
-async (conn, mek, m, { from, args, q, reply, react }) => {
-    try {
-        if (!q) return reply("🧠 Please provide a message for the AI.\nExample: `.copilot2 Hello`");
-
-        // ✅ Malvin API (Deep Thinking mode)
-        const apiUrl = `https://malvin-api.vercel.app/ai/copilot-think?text=${encodeURIComponent(q)}`;
-
-        const { data } = await axios.get(apiUrl);
-
-        // 🧾 Validate response
-        if (!data?.status || !data?.result) {
-            await react("❌");
-            return reply("AI failed to respond. Please try again later.");
-        }
-
-        // 🧩 Nicely formatted AI message
-        const responseMsg = `
-🤖 *Microsoft Copilot - Deep Thinking*  
-━━━━━━━━━━━━━━━  
+┌───────────────────┐
 ${data.result}
+└───────────────────┘
+⌚ *ᴛɪᴍᴇ:* ${data.response_time}
+> *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
 
-🕒 *Response Time:* ${data.response_time}  
-        `.trim();
-
-        await reply(responseMsg);
+        await conn.sendMessage(from, { text: response, contextInfo: cleanContext(sender) }, { quoted: mek });
         await react("✅");
     } catch (e) {
-        console.error("Error in AI command:", e);
         await react("❌");
-        reply("An error occurred while communicating with the AI.");
+        reply(`❌ *ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
     }
 });
 
+// 5. GPT-5 (COPILOT ENGINE)
 cmd({
     pattern: "gpt",
-    desc: "Chat with Microsoft Copilot - GPT-5",
+    desc: "Chat with GPT-5 Engine",
     category: "ai",
     react: "🤖",
     filename: __filename
 },
-async (conn, mek, m, { from, args, q, reply, react }) => {
+async (conn, mek, m, { from, args, q, reply, react, sender }) => {
     try {
-        if (!q) {
-            return reply("🧠 Please provide a message for the AI.\nExample: `.gpt Hello`");
-        }
+        if (!q) return reply(`⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ǫᴜᴇsᴛɪᴏɴ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
 
-        // ✅ Malvin API - GPT-5 Endpoint
         const apiUrl = `https://malvin-api.vercel.app/ai/gpt-5?text=${encodeURIComponent(q)}`;
-
         const { data } = await axios.get(apiUrl);
 
-        // 🧾 Validate Response
         if (!data?.status || !data?.result) {
             await react("❌");
-            return reply("AI failed to respond. Please try again later.");
+            return reply(`❌ *ɢᴘᴛ-5 ꜰᴀɪʟᴇᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
         }
 
-        // 🧩 Nicely formatted response
-        const responseMsg = `
-🤖 *Microsoft Copilot GPT-5 AI Response*  
-━━━━━━━━━━━━━━━  
+        const response = `
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ɢᴘᴛ-5 ᴄᴏʀᴇ 」*
+
+┌───────────────────┐
 ${data.result}
+└───────────────────┘
+⌚ *ᴛɪᴍᴇ:* ${data.response_time}
+> *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
 
-🕒 *Response Time:* ${data.response_time}
-        `.trim();
-
-        await reply(responseMsg);
+        await conn.sendMessage(from, { text: response, contextInfo: cleanContext(sender) }, { quoted: mek });
         await react("✅");
     } catch (e) {
-        console.error("Error in AI command:", e);
         await react("❌");
-        reply("An error occurred while communicating with the AI.");
+        reply(`❌ *ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`);
     }
 });

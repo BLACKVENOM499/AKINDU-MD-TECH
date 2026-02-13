@@ -5,17 +5,17 @@ cmd({
   pattern: "mediafire",
   alias: ["mfire"],
   react: '📥',
-  desc: "Download files from MediaFire using Sadiya-Tech API.",
+  desc: "Download files from MediaFire.",
   category: "download",
   use: ".mediafire <MediaFire URL>",
   filename: __filename
-}, async (conn, mek, m, { from, reply, args, q }) => {
+}, async (conn, mek, m, { from, reply, args, q, sender }) => {
   try {
     if (!q) {
-      return reply('⚠️ Please provide a MediaFire URL.\n\nExample:\n`.mediafire https://www.mediafire.com/file/...`');
+      return reply('⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴍᴇᴅɪᴀꜰɪʀᴇ ᴜʀʟ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*');
     }
 
-    // Add a reaction while processing
+    // Processing reaction
     await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
 
     // Build the API URL
@@ -26,14 +26,24 @@ cmd({
 
     // Validate response
     if (!data.status || !data.result || !data.result.download) {
-      return reply('❌ Unable to fetch the file. Please try again later or check the URL.');
+      return reply('❌ *ᴜɴᴀʙʟᴇ ᴛᴏ ꜰᴇᴛᴄʜ ᴛʜᴇ ꜰɪʟᴇ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*');
     }
 
     // Extract details
     const { fileName, uploaded, fileType, size, download } = data.result;
 
-    // Inform user
-    await reply(`📥 *Downloading:* ${fileName}\n*Size:* ${size}\nPlease wait...`);
+    // --- CYBER GRID INFO PANEL ---
+    const infoMsg = `
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴍᴇᴅɪᴀꜰɪʀᴇ 」*
+
+┌───────────────────┐
+  📂 *ꜰɪʟᴇ:* ${fileName}
+  📦 *sɪᴢᴇ:* ${size}
+  📅 *ᴜᴘ:* ${uploaded}
+└───────────────────┘
+> *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
+
+    await reply(infoMsg);
 
     // Download file
     const fileResponse = await axios.get(download, { responseType: 'arraybuffer' });
@@ -43,16 +53,11 @@ cmd({
       document: fileResponse.data,
       mimetype: fileType || 'application/octet-stream',
       fileName: fileName,
-      caption: `📂 *File Name:* ${fileName}\n📦 *Size:* ${size}\n📅 *Uploaded:* ${uploaded}\n`,
+      caption: `*ᴀᴋɪɴᴅᴜ-ᴍᴅ*`,
       contextInfo: {
-        mentionedJid: [m.sender],
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: '',
-          newsletterName: '',
-          serverMessageId: 143
-        }
+        mentionedJid: [sender],
+        forwardingScore: 0,
+        isForwarded: false
       }
     }, { quoted: mek });
 
@@ -61,7 +66,7 @@ cmd({
 
   } catch (error) {
     console.error('Error downloading file:', error);
-    reply('❌ Error downloading the file. Please check the link or try again later.');
+    reply('❌ *ᴇʀʀᴏʀ ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ᴛʜᴇ ꜰɪʟᴇ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*');
     await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
   }
 });

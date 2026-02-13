@@ -1,6 +1,7 @@
 const { cmd } = require('../command');
 const yts = require('yt-search');
 const axios = require('axios');
+const config = require('../config');
 
 // --- SONG COMMAND ---
 cmd({
@@ -10,42 +11,52 @@ cmd({
     category: "download",
     use: ".song <query>",
     filename: __filename
-}, async (conn, mek, m, { from, reply, q }) => {
+}, async (conn, mek, m, { from, reply, q, sender }) => {
     try {
-        if (!q) return reply("❓ *ᴡʜᴀᴛ sᴏɴɢ ᴅᴏ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴅᴏᴡɴʟᴏᴀᴅ?*");
+        if (!q) return reply("⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ sᴏɴɢ ɴᴀᴍᴇ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
 
         const search = await yts(q);
-        if (!search.videos.length) return reply("❌ *ɴᴏ ʀᴇsᴜʟᴛs ꜰᴏᴜɴᴅ.*");
+        if (!search.videos.length) return reply("❌ *ɴᴏ ʀᴇsᴜʟᴛs ꜰᴏᴜɴᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
 
         const data = search.videos[0];
         const api = `https://ominisave.vercel.app/api/ytmp3_v3?url=${encodeURIComponent(data.url)}`;
         const { data: apiRes } = await axios.get(api);
 
         if (!apiRes?.status || !apiRes.result?.downloadUrl) {
-            return reply("❌ *ᴜɴᴀʙʟᴇ ᴛᴏ ᴅᴏᴡɴʟᴏᴀᴅ. ᴛʀʏ ᴀɴᴏᴛʜᴇʀ sᴏɴɢ.*");
+            return reply("❌ *ᴅᴏᴡɴʟᴏᴀᴅ ꜰᴀɪʟᴇᴅ. ᴛʀʏ ᴀɢᴀɪɴ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
         }
 
         const results = apiRes.result;
+
+        // --- CYBER GRID PANEL ---
         const caption = `
-┏━━━━━━━ 🎧 ━━━━━━━┓
-  *ʏᴛ sᴏɴɢ ᴅᴏᴡɴʟᴏᴀᴅᴇʀ*
-┗━━━━━━━━━━━━━━━━━┛
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴍᴜsɪᴄ ᴄᴏʀᴇ 」*
 
-📑 *ᴛɪᴛʟᴇ:* ${data.title}
-⏱️ *ᴅᴜʀᴀᴛɪᴏɴ:* ${data.timestamp}
-📊 *ᴠɪᴇᴡs:* ${data.views}
+┌───────────────────┐
+  🎵 *ᴛɪᴛʟᴇ:* ${data.title}
+  ⏱️ *ᴅᴜʀ:* ${data.timestamp}
+  📊 *ᴠɪᴇᴡs:* ${data.views}
+└───────────────────┘
 
-🔢 *ʀᴇᴘʟʏ ᴡɪᴛʜ ᴀ ɴᴜᴍʙᴇʀ:*
+*sᴇʟᴇᴄᴛ ꜰᴏʀᴍᴀᴛ:*
 
-  1️⃣  *ᴀᴜᴅɪᴏ ꜰɪʟᴇ*
-  2️⃣  *ᴅᴏᴄᴜᴍᴇɴᴛ ꜰɪʟᴇ*
-  3️⃣  *ᴠᴏɪᴄᴇ ɴᴏᴛᴇ (ᴘᴛᴛ)*
-
+┏━━━━━━━━━━━━━━━━━━━┓
+┃ 01 ‣ *ᴀᴜᴅɪᴏ ꜰɪʟᴇ* 🎶
+┃ 02 ‣ *ᴅᴏᴄᴜᴍᴇɴᴛ ꜰɪʟᴇ* 📂
+┃ 03 ‣ *ᴠᴏɪᴄᴇ ɴᴏᴛᴇ* 🎤
+┗━━━━━━━━━━━━━━━━━━━┛
 > *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
 
-        const sentMsg = await conn.sendMessage(from, { image: { url: data.thumbnail }, caption }, { quoted: m });
+        const sentMsg = await conn.sendMessage(from, { 
+            image: { url: data.thumbnail }, 
+            caption,
+            contextInfo: {
+                mentionedJid: [sender],
+                forwardingScore: 0,
+                isForwarded: false
+            }
+        }, { quoted: m });
 
-        // Handler logic with cleanup
         const handler = async (msgData) => {
             const receivedMsg = msgData.messages[0];
             if (!receivedMsg?.message) return;
@@ -54,20 +65,26 @@ cmd({
 
             await conn.sendMessage(from, { react: { text: '📥', key: receivedMsg.key } });
 
-            if (text === "1") {
-                await conn.sendMessage(from, { audio: { url: results.downloadUrl }, mimetype: "audio/mpeg", ptt: false }, { quoted: receivedMsg });
-            } else if (text === "2") {
-                await conn.sendMessage(from, { document: { url: results.downloadUrl }, mimetype: "audio/mpeg", fileName: `${data.title}.mp3` }, { quoted: receivedMsg });
-            } else if (text === "3") {
-                await conn.sendMessage(from, { audio: { url: results.downloadUrl }, mimetype: "audio/mpeg", ptt: true }, { quoted: receivedMsg });
+            const audioOptions = {
+                contextInfo: { forwardingScore: 0, isForwarded: false }
+            };
+
+            if (text === "1" || text === "01") {
+                await conn.sendMessage(from, { audio: { url: results.downloadUrl }, mimetype: "audio/mpeg", ptt: false, ...audioOptions }, { quoted: receivedMsg });
+                conn.ev.off("messages.upsert", handler);
+            } else if (text === "2" || text === "02") {
+                await conn.sendMessage(from, { document: { url: results.downloadUrl }, mimetype: "audio/mpeg", fileName: `${data.title}.mp3`, ...audioOptions }, { quoted: receivedMsg });
+                conn.ev.off("messages.upsert", handler);
+            } else if (text === "3" || text === "03") {
+                await conn.sendMessage(from, { audio: { url: results.downloadUrl }, mimetype: "audio/mpeg", ptt: true, ...audioOptions }, { quoted: receivedMsg });
+                conn.ev.off("messages.upsert", handler);
             }
-            conn.ev.off("messages.upsert", handler); // Stop listening
         };
 
         conn.ev.on("messages.upsert", handler);
         setTimeout(() => conn.ev.off("messages.upsert", handler), 300000);
 
-    } catch (e) { reply("❌ *ᴇʀʀᴏʀ ᴘʀᴏᴄᴇssɪɴɢ sᴏɴɢ.*"); }
+    } catch (e) { reply("❌ *sʏsᴛᴇᴍ ᴇʀʀᴏʀ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*"); }
 });
 
 // --- VIDEO COMMAND ---
@@ -78,35 +95,43 @@ cmd({
     category: "download",
     use: ".video <query>",
     filename: __filename
-}, async (conn, mek, m, { from, reply, q }) => {
+}, async (conn, mek, m, { from, reply, q, sender }) => {
     try {
-        if (!q) return reply("❓ *ᴡʜᴀᴛ ᴠɪᴅᴇᴏ ᴅᴏ ʏᴏᴜ ᴡᴀɴᴛ?*");
+        if (!q) return reply("⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠɪᴅᴇᴏ ɴᴀᴍᴇ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
 
         const search = await yts(q);
-        if (!search.videos.length) return reply("❌ *ɴᴏ ʀᴇsᴜʟᴛs ꜰᴏᴜɴᴅ.*");
+        if (!search.videos.length) return reply("❌ *ɴᴏ ʀᴇsᴜʟᴛs ꜰᴏᴜɴᴅ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
 
         const data = search.videos[0];
+
+        // --- CYBER GRID PANEL ---
         const caption = `
-┏━━━━━━━ 📥 ━━━━━━━┓
-  *ʏᴛ ᴠɪᴅᴇᴏ ᴅᴏᴡɴʟᴏᴀᴅᴇʀ*
-┗━━━━━━━━━━━━━━━━━┛
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴠɪᴅᴇᴏ ᴄᴏʀᴇ 」*
 
-📑 *ᴛɪᴛʟᴇ:* ${data.title}
-⏱️ *ᴅᴜʀᴀᴛɪᴏɴ:* ${data.timestamp}
+┌───────────────────┐
+  🎬 *ᴛɪᴛʟᴇ:* ${data.title}
+  ⏱️ *ᴅᴜʀ:* ${data.timestamp}
+└───────────────────┘
 
-🔢 *ʀᴇᴘʟʏ ʙᴇʟᴏᴡ ɴᴜᴍʙᴇʀ*
+*sᴇʟᴇᴄᴛ ᴘʀᴏᴛᴏᴄᴏʟ:*
 
-🎥 *ᴠɪᴅᴇᴏ ꜰᴏʀᴍᴀᴛs:*
-  🔹 1.1 - 360ᴘ (ʟᴏᴡ)
-  🔹 1.2 - 720ᴘ (ʜᴅ)
-
-📁 *ᴅᴏᴄᴜᴍᴇɴᴛ ꜰᴏʀᴍᴀᴛs:*
-  🔹 2.1 - 360ᴘ (ꜰɪʟᴇ)
-  🔹 2.2 - 720ᴘ (ꜰɪʟᴇ)
-
+┏━━━━━━━━━━━━━━━━━━━┓
+┃ 01 ‣ *360ᴘ (ʟᴏᴡ)* 📉
+┃ 02 ‣ *720ᴘ (ʜᴅ)* 📈
+┃ 03 ‣ *360ᴘ (ꜰɪʟᴇ)* 📂
+┃ 04 ‣ *720ᴘ (ꜰɪʟᴇ)* 📁
+┗━━━━━━━━━━━━━━━━━━━┛
 > *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
 
-        const sentMsg = await conn.sendMessage(from, { image: { url: data.thumbnail }, caption }, { quoted: m });
+        const sentMsg = await conn.sendMessage(from, { 
+            image: { url: data.thumbnail }, 
+            caption,
+            contextInfo: {
+                mentionedJid: [sender],
+                forwardingScore: 0,
+                isForwarded: false
+            }
+        }, { quoted: m });
 
         const handler = async (msgData) => {
             const receivedMsg = msgData.messages[0];
@@ -114,8 +139,8 @@ cmd({
             const text = (receivedMsg.message.conversation || receivedMsg.message.extendedTextMessage?.text || "").trim();
             if (receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId !== sentMsg.key.id) return;
 
-            let quality = text.endsWith(".2") ? "720p" : "360p";
-            let isDoc = text.startsWith("2");
+            let quality = (text === "2" || text === "02" || text === "4" || text === "04") ? "720p" : "360p";
+            let isDoc = (text === "3" || text === "03" || text === "4" || text === "04");
 
             await conn.sendMessage(from, { react: { text: '⏳', key: receivedMsg.key } });
 
@@ -123,18 +148,25 @@ cmd({
             const { data: apiRes } = await axios.get(api);
 
             if (apiRes?.status && apiRes.result?.downloadUrl) {
-                const media = isDoc ? { document: { url: apiRes.result.downloadUrl }, fileName: `${data.title}.mp4`, mimetype: "video/mp4" } 
-                                    : { video: { url: apiRes.result.downloadUrl }, caption: `✅ ${quality} ᴅᴏᴡɴʟᴏᴀᴅᴇᴅ` };
+                const media = isDoc ? { 
+                    document: { url: apiRes.result.downloadUrl }, 
+                    fileName: `${data.title}.mp4`, 
+                    mimetype: "video/mp4",
+                    caption: "*ᴀᴋɪɴᴅᴜ-ᴍᴅ*"
+                } : { 
+                    video: { url: apiRes.result.downloadUrl }, 
+                    caption: "*ᴀᴋɪɴᴅᴜ-ᴍᴅ*" 
+                };
                 
-                await conn.sendMessage(from, media, { quoted: receivedMsg });
+                await conn.sendMessage(from, { ...media, contextInfo: { forwardingScore: 0, isForwarded: false } }, { quoted: receivedMsg });
                 conn.ev.off("messages.upsert", handler);
             } else {
-                reply("❌ *ǫᴜᴀʟɪᴛʏ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ.*");
+                reply("❌ *ǫᴜᴀʟɪᴛʏ ᴜɴᴀᴠᴀɪʟᴀʙʟᴇ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
             }
         };
 
         conn.ev.on("messages.upsert", handler);
         setTimeout(() => conn.ev.off("messages.upsert", handler), 300000);
 
-    } catch (e) { reply("❌ *ᴇʀʀᴏʀ ᴘʀᴏᴄᴇssɪɴɢ ᴠɪᴅᴇᴏ.*"); }
+    } catch (e) { reply("❌ *sʏsᴛᴇᴍ ᴇʀʀᴏʀ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*"); }
 });

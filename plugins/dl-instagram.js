@@ -1,6 +1,6 @@
 const axios = require("axios");
 const { cmd } = require('../command');
-
+const config = require('../config');
 
 cmd({
   pattern: "instagram",
@@ -8,10 +8,10 @@ cmd({
   desc: "Download Instagram videos and audio",
   category: "download",
   filename: __filename
-}, async (conn, m, store, { from, quoted, q, reply }) => {
+}, async (conn, m, store, { from, quoted, q, reply, sender }) => {
   try {
     if (!q || !q.startsWith("https://")) {
-      return conn.sendMessage(from, { text: "❌ Please provide a valid Instagram URL." }, { quoted: m });
+      return reply("⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɪɢ ᴜʀʟ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
     }
 
     await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
@@ -21,70 +21,84 @@ cmd({
     const data = response.data;
 
     if (!data || !data.status || !data.data || data.data.length === 0) {
-      return reply("⚠️ Failed to retrieve Instagram media. Please check the link and try again.");
+      return reply("❌ *ꜰᴀɪʟᴇᴅ ᴛᴏ ꜰᴇᴛᴄʜ ᴍᴇᴅɪᴀ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
     }
 
     const media = data.data[0];
+
+    // --- CYBER GRID SELECTION PANEL ---
     const caption = `
-\`📥 𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐄𝐑 📥\`
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : ɪɢ ᴅᴏᴡɴʟᴏᴀᴅᴇʀ 」*
 
-🗂️ *Type:* ${media.type.toUpperCase()}
-🔗 *Link:* ${q}
+┌───────────────────┐
+  ✨ *ᴛʏᴘᴇ:* ${media.type.toUpperCase()}
+  🔗 *sᴛᴀᴛᴜs:* ʟɪɴᴋ ʀᴇᴀᴅʏ
+└───────────────────┘
 
-🔢 *Reply Below Number*
+*sᴇʟᴇᴄᴛ ʏᴏᴜʀ ꜰᴏʀᴍᴀᴛ:*
 
-1️⃣  *HD Quality*🔋
-2️⃣  *Audio (MP3)*🎶
-
+┏━━━━━━━━━━━━━━━━━━━┓
+┃ 01 ‣ *ʜᴅ ᴠɪᴅᴇᴏ ꜰɪʟᴇ* 🎥
+┃ 02 ‣ *ᴀᴜᴅɪᴏ ᴍᴘ𝟹* 🎶
+┗━━━━━━━━━━━━━━━━━━━┛
 > *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
 
     const sentMsg = await conn.sendMessage(from, {
       image: { url: media.thumbnail },
-      caption
+      caption,
+      contextInfo: {
+        mentionedJid: [sender],
+        forwardingScore: 0,
+        isForwarded: false,
+        externalAdReply: {
+          title: "ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴍᴇᴅɪᴀ ᴄᴏʀᴇ",
+          body: "ɪɴsᴛᴀɢʀᴀᴍ ᴅᴏᴡɴʟᴏᴀᴅ ᴘᴀɴᴇʟ",
+          thumbnail: { url: media.thumbnail },
+          sourceUrl: `https://wa.me/${config.OWNER_NUMBER}`,
+          mediaType: 1,
+          renderLargerThumbnail: true
+        }
+      }
     }, { quoted: m });
 
     const messageID = sentMsg.key.id;
 
-    // 🧠 Listen for user reply
-    conn.ev.on("messages.upsert", async (msgData) => {
+    // --- INTERACTIVE LISTENER ---
+    const handler = async (msgData) => {
       const receivedMsg = msgData.messages[0];
       if (!receivedMsg?.message) return;
 
-      const receivedText = receivedMsg.message.conversation || receivedMsg.message.extendedTextMessage?.text;
-      const senderID = receivedMsg.key.remoteJid;
+      const receivedText = (receivedMsg.message.conversation || receivedMsg.message.extendedTextMessage?.text || "").trim();
       const isReplyToBot = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
 
       if (isReplyToBot) {
-        await conn.sendMessage(senderID, { react: { text: '⏳', key: receivedMsg.key } });
-
-        switch (receivedText.trim()) {
-          case "1":
-            if (media.type === "video") {
-              await conn.sendMessage(senderID, {
-                video: { url: media.url },
-                caption: "📥 *Video Downloaded Successfully!*"
-              }, { quoted: receivedMsg });
-            } else {
-              reply("⚠️ No video found for this post.");
-            }
-            break;
-
-          case "2":
-              await conn.sendMessage(senderID, {
-                audio: { url: media.url },
-                mimetype: "audio/mp4",
-                ptt: false
-              }, { quoted: receivedMsg });
-            break;
-
-          default:
-            reply("❌ Invalid option! Please reply with 1 or 2.");
+        if (receivedText === "1") {
+          await conn.sendMessage(from, { react: { text: '🎥', key: receivedMsg.key } });
+          await conn.sendMessage(from, {
+            video: { url: media.url },
+            caption: "*ᴀᴋɪɴᴅᴜ-ᴍᴅ*",
+            contextInfo: { forwardingScore: 0, isForwarded: false }
+          }, { quoted: receivedMsg });
+          conn.ev.off("messages.upsert", handler);
+        } 
+        else if (receivedText === "2") {
+          await conn.sendMessage(from, { react: { text: '🎶', key: receivedMsg.key } });
+          await conn.sendMessage(from, {
+            audio: { url: media.url },
+            mimetype: "audio/mp4",
+            ptt: false,
+            contextInfo: { forwardingScore: 0, isForwarded: false }
+          }, { quoted: receivedMsg });
+          conn.ev.off("messages.upsert", handler);
         }
       }
-    });
+    };
+
+    conn.ev.on("messages.upsert", handler);
+    setTimeout(() => conn.ev.off("messages.upsert", handler), 300000);
 
   } catch (error) {
-    console.error("Instagram Plugin Error:", error);
-    reply("❌ An error occurred while processing your request. Please try again later.");
+    console.error(error);
+    reply("❌ *sʏsᴛᴇᴍ ᴇʀʀᴏʀ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
   }
 });

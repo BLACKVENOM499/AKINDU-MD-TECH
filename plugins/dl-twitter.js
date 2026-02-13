@@ -1,102 +1,125 @@
 const axios = require("axios");
 const { cmd } = require('../command');
+const config = require('../config');
 
 cmd({
   pattern: "twitter",
+  alias: ["tw", "x"],
   desc: "Download Twitter videos and audio",
   category: "download",
   filename: __filename
-}, async (conn, m, store, { from, quoted, q, reply }) => {
+}, async (conn, m, store, { from, quoted, q, reply, sender }) => {
   try {
     if (!q || !q.startsWith("https://")) {
-      return conn.sendMessage(from, { text: "❌ Please provide a valid Twitter URL." }, { quoted: m });
+      return reply("⚠️ *ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴛᴡɪᴛᴛᴇʀ ᴜʀʟ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
     }
 
     await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
 
-    // ✅ Using the Sadiya API
+    // ✅ Fetching data
     const response = await axios.get(`https://ty-opal-eta.vercel.app/download/twitter?url=${q}`);
     const data = response.data;
 
     if (!data || !data.status || !data.result) {
-      return reply("⚠️ Failed to retrieve Twitter media. Please check the link and try again.");
+      return reply("❌ *ꜰᴀɪʟᴇᴅ ᴛᴏ ꜰᴇᴛᴄʜ ᴍᴇᴅɪᴀ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
     }
 
     const { desc, thumb, video_sd, video_hd, audio } = data.result;
 
+    // --- CYBER GRID SELECTION PANEL ---
     const caption = `
-\`📥 𝐓𝐖𝐈𝐓𝐓𝐄𝐑 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃 📥\`
+*「 ᴀᴋɪɴᴅᴜ-ᴍᴅ : x ᴅᴏᴡɴʟᴏᴀᴅᴇʀ 」*
 
-📑 *Description:* ${desc || "No description"}
-🔗 *Link:* ${q}
+┌───────────────────┐
+  📑 *ᴅᴇsᴄ:* ${desc ? desc.substring(0, 50) + "..." : "No description"}
+  🔗 *sᴛᴀᴛᴜs:* ʟɪɴᴋ ᴅᴇᴛᴇᴄᴛᴇᴅ
+└───────────────────┘
 
-🔢 *Reply Below Number*
+*sᴇʟᴇᴄᴛ ᴘʀᴏᴛᴏᴄᴏʟ:*
 
-1️⃣ *SD Quality*🪫
-2️⃣ *HD Quality*🔋
-3️⃣ *Audio (MP3)*🎶
-4️⃣ *Audio*🎶
-
+┏━━━━━━━━━━━━━━━━━━━┓
+┃ 01 ‣ *sᴅ ǫᴜᴀʟɪᴛʏ* 🪫
+┃ 02 ‣ *ʜᴅ ǫᴜᴀʟɪᴛʏ* 🔋
+┃ 03 ‣ *ᴀᴜᴅɪᴏ ᴍᴘ𝟹 (ᴠɪᴅ)* 🎶
+┃ 04 ‣ *ᴏʀɪɢɪɴᴀʟ ᴀᴜᴅɪᴏ* 🎵
+┗━━━━━━━━━━━━━━━━━━━┛
 > *ᴀᴋɪɴᴅᴜ-ᴍᴅ*`;
 
     const sentMsg = await conn.sendMessage(from, {
       image: { url: thumb },
-      caption
+      caption,
+      contextInfo: {
+        mentionedJid: [sender],
+        forwardingScore: 0,
+        isForwarded: false,
+        externalAdReply: {
+          title: "ᴀᴋɪɴᴅᴜ-ᴍᴅ : ᴍᴇᴅɪᴀ ᴄᴏʀᴇ",
+          body: "ᴛᴡɪᴛᴛᴇʀ / x ᴄᴏɴᴛᴇɴᴛ ᴅᴇʟɪᴠᴇʀʏ",
+          thumbnail: { url: thumb },
+          sourceUrl: `https://wa.me/${config.OWNER_NUMBER}`,
+          mediaType: 1,
+          renderLargerThumbnail: true
+        }
+      }
     }, { quoted: m });
 
     const messageID = sentMsg.key.id;
 
-    // 🧠 Reply-based selector
-    conn.ev.on("messages.upsert", async (msgData) => {
+    // --- INTERACTIVE LISTENER ---
+    const handler = async (msgData) => {
       const receivedMsg = msgData.messages[0];
       if (!receivedMsg?.message) return;
 
-      const receivedText = receivedMsg.message.conversation || receivedMsg.message.extendedTextMessage?.text;
-      const senderID = receivedMsg.key.remoteJid;
+      const receivedText = (receivedMsg.message.conversation || receivedMsg.message.extendedTextMessage?.text || "").trim();
       const isReplyToBot = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
 
       if (isReplyToBot) {
-        await conn.sendMessage(senderID, { react: { text: '⏳', key: receivedMsg.key } });
-
-        switch (receivedText.trim()) {
-          case "1":
-            await conn.sendMessage(senderID, {
-              video: { url: video_sd },
-              caption: "📥 *Downloaded in SD Quality*"
-            }, { quoted: receivedMsg });
-            break;
-
-          case "2":
-            await conn.sendMessage(senderID, {
-              video: { url: video_hd },
-              caption: "📥 *Downloaded in HD Quality*"
-            }, { quoted: receivedMsg });
-            break;
-
-          case "3":
-            await conn.sendMessage(senderID, {
-              audio: { url: video_sd || video_hd },
-              mimetype: "audio/mp4",
-              ptt: false
-            }, { quoted: receivedMsg });
-            break;
-
-          case "4":
-            await conn.sendMessage(senderID, {
-              audio: { url: audio },
-              mimetype: "audio/mp4",
-              ptt: false
-            }, { quoted: receivedMsg });
-            break;
-
-          default:
-            reply("❌ Invalid option! Please reply with 1, 2, 3, or 4.");
+        if (receivedText === "1") {
+          await conn.sendMessage(from, { react: { text: '📉', key: receivedMsg.key } });
+          await conn.sendMessage(from, {
+            video: { url: video_sd },
+            caption: "*ᴀᴋɪɴᴅᴜ-ᴍᴅ*",
+            contextInfo: { forwardingScore: 0, isForwarded: false }
+          }, { quoted: receivedMsg });
+          conn.ev.off("messages.upsert", handler);
+        } 
+        else if (receivedText === "2") {
+          await conn.sendMessage(from, { react: { text: '📈', key: receivedMsg.key } });
+          await conn.sendMessage(from, {
+            video: { url: video_hd },
+            caption: "*ᴀᴋɪɴᴅᴜ-ᴍᴅ*",
+            contextInfo: { forwardingScore: 0, isForwarded: false }
+          }, { quoted: receivedMsg });
+          conn.ev.off("messages.upsert", handler);
+        }
+        else if (receivedText === "3") {
+          await conn.sendMessage(from, { react: { text: '🎶', key: receivedMsg.key } });
+          await conn.sendMessage(from, {
+            audio: { url: video_sd || video_hd },
+            mimetype: "audio/mp4",
+            ptt: false,
+            contextInfo: { forwardingScore: 0, isForwarded: false }
+          }, { quoted: receivedMsg });
+          conn.ev.off("messages.upsert", handler);
+        }
+        else if (receivedText === "4") {
+          await conn.sendMessage(from, { react: { text: '🎵', key: receivedMsg.key } });
+          await conn.sendMessage(from, {
+            audio: { url: audio },
+            mimetype: "audio/mp4",
+            ptt: false,
+            contextInfo: { forwardingScore: 0, isForwarded: false }
+          }, { quoted: receivedMsg });
+          conn.ev.off("messages.upsert", handler);
         }
       }
-    });
+    };
+
+    conn.ev.on("messages.upsert", handler);
+    setTimeout(() => conn.ev.off("messages.upsert", handler), 300000);
 
   } catch (error) {
-    console.error("Twitter Plugin Error:", error);
-    reply("❌ An error occurred while processing your request. Please try again later.");
+    console.error(error);
+    reply("❌ *sʏsᴛᴇᴍ ᴇʀʀᴏʀ.*\n\n*ᴀᴋɪɴᴅᴜ-ᴍᴅ*");
   }
 });
