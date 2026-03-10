@@ -928,7 +928,7 @@ if (isBanned) return; // Ignore banned users completely
   app.use(express.static(path.join(__dirname, 'lib')));
 
 app.get('/', (req, res) => {
-  res.redirect('/jawadtech.html');
+  res.redirect('/akindu.html');
 });
   app.listen(port, () => console.log(`Server listening on port http://localhost:${port}`));
   setTimeout(() => {
